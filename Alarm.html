@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="jacky_kl_cao">
+    <meta name="description" content="網頁鬧鐘應用 - 支援語音倒數、多段計時等功能">
+    <title>網頁鬧鐘</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #444;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+        select, input, button {
+            margin: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        select, input {
+            background: #f8f9fa;
+            border: 2px solid #ddd;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #666;
+            box-shadow: 0 0 5px rgba(102,102,102,0.5);
+        }
+        button {
+            background: linear-gradient(45deg, #666, #999);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .alarm-selection {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .alarm-selection select {
+            flex: 1;
+            min-width: 150px;
+        }
+        .alarm-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .settings {
+            margin-bottom: 20px;
+        }
+        .setting-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            gap: 10px;
+        }
+        .setting-group label {
+            min-width: 120px;
+            text-align: right;
+        }
+        .setting-group input, .setting-group select {
+            flex: 1;
+            max-width: 100px;
+        }
+        .settings {
+            margin: 20px 0;
+        }
+        .settings label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .segment-times {
+            margin: 20px 0;
+        }
+        .segment-times input {
+            width: 100px;
+            margin-right: 10px;
+        }
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            color: #666;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .countdown {
+            font-size: 3em;
+            color: #333;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .buttons button {
+            padding: 15px 20px;
+            font-size: 18px;
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+            .container {
+                padding: 20px;
+            }
+            .buttons button {
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>⏰ 網頁鬧鐘 🔔</h1>
+    <div class="container">
+        <div class="alarm-selection">
+            <select id="alarmSelect"></select>
+            <select id="sortSelect">
+                <option value="minutes-asc">分鐘數升序</option>
+                <option value="minutes-desc">分鐘數降序</option>
+                <option value="name">名稱</option>
+            </select>
+        </div>
+        <div class="alarm-controls">
+            <button id="addAlarm">➕ 新增鬧鐘</button>
+            <button id="deleteAlarm">🗑️ 刪除鬧鐘</button>
+        </div>
+        <div class="settings">
+            <div class="setting-group">
+                <label for="minutes">⏱️ 總分鐘：</label>
+                <input type="number" id="minutes" min="1" value="5">
+            </div>
+            <div class="setting-group">
+                <label for="segments">🔢 段數 (1-5)：</label>
+                <select id="segments">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label for="voiceCountdown">🔊 語音倒數：</label>
+                <input type="checkbox" id="voiceCountdown" checked>
+            </div>
+            <div class="setting-group">
+                <label for="voiceMinutes">⏰ 分鐘倒數：</label>
+                <input type="checkbox" id="voiceMinutes" checked>
+            </div>
+            <div class="setting-group">
+                <label for="voiceSeconds">⏱️ 秒數倒數：</label>
+                <input type="checkbox" id="voiceSeconds" checked>
+            </div>
+            <div class="setting-group">
+                <label for="secondsStage">📊 秒數階段：</label>
+                <select id="secondsStage">
+                    <option value="30">30秒開始</option>
+                    <option value="20">20秒開始</option>
+                    <option value="10">10秒開始</option>
+                    <option value="5">5秒開始</option>
+                </select>
+            </div>
+        </div>
+        <div id="segmentTimes" class="segment-times"></div>
+        <div class="buttons">
+            <button id="start">▶️ 開始鬧鐘</button>
+            <button id="pause">⏸️ 暫停</button>
+            <button id="reset">🔄 重置</button>
+            <button id="testRing">🔔 測試響鈴</button>
+            <button id="testVoice">🔊 測試語音</button>
+        </div>
+        <div id="status" class="status">準備中</div>
+        <div id="countdown" class="countdown"></div>
+    </div>
+
+
+    <script>
+        let timer;
+        let currentSegment = 0;
+        let totalSegments;
+        let segmentTimes = [];
+        let intervalTimes = [];
+        let totalTime;
+        let alarms = [];
+        let currentAlarmIndex = 0;
+        let isLoading = false;
+        let isPaused = false;
+        let pausedTimeLeft = 0;
+        const defaultAlarms = ['10分鐘 (10-10)', '15分鐘 (5-10)', '20分鐘 (10-10)', '25分鐘 (5-10-10)'];
+
+        // 語音合成初始化
+        const synth = window.speechSynthesis;
+        let lastSpokenMinute = -1;
+        let lastSpokenSecond = -1;
+
+        // 載入鬧鐘
+        alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+        // 為舊鬧鐘添加intervalTimes
+        alarms.forEach(alarm => {
+            if (!alarm.intervalTimes) {
+                alarm.intervalTimes = new Array(Math.max(0, alarm.segments - 1)).fill(10);
+            }
+        });
+        const defaultAlarmsData = [
+            {name: '10分鐘 (10-10)', minutes: 10, segments: 2, segmentTimes: [600, 600], intervalTimes: [10]},
+            {name: '15分鐘 (5-10)', minutes: 15, segments: 2, segmentTimes: [300, 600], intervalTimes: [10]},
+            {name: '20分鐘 (10-10)', minutes: 20, segments: 2, segmentTimes: [600, 600], intervalTimes: [10]},
+            {name: '25分鐘 (5-10-10)', minutes: 25, segments: 3, segmentTimes: [300, 600, 600], intervalTimes: [10, 10]},
+            {name: '5分鐘', minutes: 5, segments: 1, segmentTimes: [300], intervalTimes: []},
+            {name: '3分鐘', minutes: 3, segments: 1, segmentTimes: [180], intervalTimes: []}
+        ];
+        defaultAlarmsData.forEach(def => {
+            if (!alarms.some(a => a.name === def.name)) {
+                alarms.push(def);
+            }
+        });
+        document.getElementById('sortSelect').value = 'minutes-asc';
+        sortAlarms();
+        updateAlarmSelect();
+        loadAlarm();
+
+        document.getElementById('alarmSelect').addEventListener('change', () => {
+            const selectedName = document.getElementById('alarmSelect').value;
+            currentAlarmIndex = alarms.findIndex(alarm => alarm.name === selectedName);
+            loadAlarm();
+        });
+        document.getElementById('sortSelect').addEventListener('change', () => {
+            sortAlarms();
+            // 更新currentAlarmIndex
+            const currentName = alarms[currentAlarmIndex] ? alarms[currentAlarmIndex].name : '';
+            currentAlarmIndex = alarms.findIndex(alarm => alarm.name === currentName);
+            if (currentAlarmIndex === -1) currentAlarmIndex = 0;
+            updateAlarmSelect();
+            loadAlarm();
+        });
+        document.getElementById('addAlarm').addEventListener('click', () => {
+            const name = prompt('輸入鬧鐘名稱：');
+            if (name) {
+                if (alarms.some(a => a.name === name)) {
+                    alert('名稱已存在');
+                    return;
+                }
+                alarms.push({name, minutes: 5, segments: 1, segmentTimes: [300], intervalTimes: []});
+                sortAlarms();
+                currentAlarmIndex = alarms.findIndex(alarm => alarm.name === name);
+                updateAlarmSelect();
+                loadAlarm();
+                saveAlarms();
+            }
+        });
+        document.getElementById('deleteAlarm').addEventListener('click', () => {
+            const currentName = alarms[currentAlarmIndex].name;
+            if (defaultAlarms.includes(currentName)) {
+                alert('預設鬧鐘不能刪除');
+                return;
+            }
+            if (alarms.length > 1) {
+                alarms.splice(currentAlarmIndex, 1);
+                sortAlarms();
+                currentAlarmIndex = 0;
+                updateAlarmSelect();
+                loadAlarm();
+                saveAlarms();
+            } else {
+                alert('至少保留一個鬧鐘');
+            }
+        });
+        document.getElementById('start').addEventListener('click', startAlarm);
+        document.getElementById('pause').addEventListener('click', togglePause);
+        document.getElementById('reset').addEventListener('click', resetAlarm);
+        document.getElementById('testRing').addEventListener('click', ring);
+        document.getElementById('testVoice').addEventListener('click', testVoiceCountdown);
+
+        function sortAlarms() {
+            const sortBy = document.getElementById('sortSelect').value;
+            if (sortBy === 'minutes-asc') {
+                alarms.sort((a, b) => a.minutes - b.minutes);
+            } else if (sortBy === 'minutes-desc') {
+                alarms.sort((a, b) => b.minutes - a.minutes);
+            } else if (sortBy === 'name') {
+                alarms.sort((a, b) => a.name.localeCompare(b.name));
+            }
+        }
+
+        function loadAlarm() {
+            isLoading = true;
+            const alarm = alarms[currentAlarmIndex];
+            document.getElementById('minutes').value = alarm.minutes;
+            document.getElementById('segments').value = alarm.segments;
+            updateSegmentInputs();
+            isLoading = false;
+            lastSpokenMinute = -1; // 重置語音播報記錄
+            lastSpokenSecond = -1;
+        }
+
+        function saveCurrentAlarm() {
+            if (isLoading) return;
+            const alarm = alarms[currentAlarmIndex];
+            alarm.minutes = parseInt(document.getElementById('minutes').value) || 5;
+            alarm.segments = parseInt(document.getElementById('segments').value) || 1;
+            alarm.segmentTimes = [];
+            alarm.intervalTimes = [];
+            for (let i = 1; i <= alarm.segments; i++) {
+                const timeStr = document.getElementById(`seg${i}`).value;
+                const val = parseTime(timeStr) || 60;
+                alarm.segmentTimes.push(val);
+                if (i < alarm.segments) {
+                    const intervalVal = parseInt(document.getElementById(`interval${i}`).value) || 10;
+                    alarm.intervalTimes.push(intervalVal);
+                }
+            }
+            saveAlarms();
+        }
+
+        function saveAlarms() {
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+        }
+
+        function updateAlarmSelect() {
+            const select = document.getElementById('alarmSelect');
+            select.innerHTML = '';
+            alarms.forEach((alarm, index) => {
+                const option = document.createElement('option');
+                option.value = alarm.name;
+                option.textContent = alarm.name;
+                select.appendChild(option);
+            });
+            const currentAlarm = alarms[currentAlarmIndex];
+            if (currentAlarm) {
+                select.value = currentAlarm.name;
+            }
+        }
+
+        function updateSegmentInputs() {
+            const alarm = alarms[currentAlarmIndex];
+            const segments = alarm.segments;
+            const container = document.getElementById('segmentTimes');
+            container.innerHTML = '';
+            for (let i = 1; i <= segments; i++) {
+                const label = document.createElement('label');
+                label.textContent = `第${i}段時間 (HH:MM:SS)：`;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `seg${i}`;
+                input.placeholder = '00:05:00';
+                input.value = formatTime(alarm.segmentTimes[i-1] || 60);
+                input.addEventListener('change', saveCurrentAlarm);
+                container.appendChild(label);
+                container.appendChild(input);
+                container.appendChild(document.createElement('br'));
+                if (i < segments) {
+                    const intervalLabel = document.createElement('label');
+                    intervalLabel.textContent = `第${i}段間隔秒：`;
+                    const intervalInput = document.createElement('input');
+                    intervalInput.type = 'number';
+                    intervalInput.id = `interval${i}`;
+                    intervalInput.min = '1';
+                    intervalInput.value = alarm.intervalTimes[i-1] || 10;
+                    intervalInput.addEventListener('change', saveCurrentAlarm);
+                    container.appendChild(intervalLabel);
+                    container.appendChild(intervalInput);
+                    container.appendChild(document.createElement('br'));
+                }
+            }
+        }
+
+        function startAlarm() {
+            saveCurrentAlarm(); // 先保存當前設定
+            const alarm = alarms[currentAlarmIndex];
+            totalTime = alarm.minutes * 60;
+            totalSegments = alarm.segments;
+            segmentTimes = alarm.segmentTimes;
+            intervalTimes = alarm.intervalTimes;
+
+            let totalSegTime = segmentTimes.reduce((a, b) => a + b, 0);
+            if (totalSegTime > totalTime) {
+                alert('所有段時間總和超過總時間');
+                return;
+            }
+            for (let seg of segmentTimes) {
+                if (seg < 1 || seg > totalTime) {
+                    alert('段時間無效');
+                    return;
+                }
+            }
+            for (let inter of intervalTimes) {
+                if (inter < 1) {
+                    alert('間隔時間無效');
+                    return;
+                }
+            }
+
+            document.getElementById('status').textContent = `段數: ${totalSegments}, 每段: ${segmentTimes.map(t => formatTime(t)).join(', ')}, 間隔: ${intervalTimes.join(', ')}秒`;
+            currentSegment = 0;
+            isPaused = false;
+            document.getElementById('pause').textContent = '暫停';
+            runSegment();
+        }
+
+        function runSegment() {
+            currentSegment++;
+            if (currentSegment > totalSegments) {
+                document.getElementById('status').textContent = '鬧鐘結束';
+                document.getElementById('countdown').textContent = '';
+                return;
+            }
+
+            document.getElementById('status').textContent = `第${currentSegment}段響鈴中`;
+            let timeLeft = segmentTimes[currentSegment - 1];
+            runCountdown(timeLeft);
+        }
+
+        function runCountdown(timeLeft) {
+            document.getElementById('countdown').textContent = formatTime(timeLeft);
+            speakTime(timeLeft); // 語音播報剩餘時間
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('countdown').textContent = formatTime(timeLeft);
+                speakTime(timeLeft); // 語音播報剩餘時間
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    ring();
+                    if (currentSegment < totalSegments) {
+                        // 直接進入下一段，沒有間隔
+                        runSegment();
+                    } else {
+                        document.getElementById('status').textContent = '鬧鐘結束';
+                        document.getElementById('countdown').textContent = '';
+                    }
+                }
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function parseTime(timeStr) {
+            if (!timeStr || timeStr === '') return 0;
+            const parts = timeStr.split(':').map(Number);
+            const h = parts[0] || 0;
+            const m = parts[1] || 0;
+            const s = parts[2] || 0;
+            return h * 3600 + m * 60 + s;
+        }
+
+        function speakTime(seconds) {
+            if (!document.getElementById('voiceCountdown').checked || !synth) return;
+            
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            
+            const secondsStage = parseInt(document.getElementById('secondsStage').value);
+            
+            // 分鐘倒數
+            if (document.getElementById('voiceMinutes').checked && seconds >= 60) {
+                const totalMinutes = Math.floor(seconds / 60);
+                if (totalMinutes !== lastSpokenMinute) {
+                    lastSpokenMinute = totalMinutes;
+                    const utterance = new SpeechSynthesisUtterance(totalMinutes.toString());
+                    utterance.lang = 'zh-TW';
+                    utterance.rate = 2.0; // 加快語音速度
+                    synth.speak(utterance);
+                }
+            }
+            
+            // 秒數倒數
+            if (document.getElementById('voiceSeconds').checked && seconds <= secondsStage && seconds > 0) {
+                if (s !== lastSpokenSecond) {
+                    lastSpokenSecond = s;
+                    const utterance = new SpeechSynthesisUtterance(s.toString());
+                    utterance.lang = 'zh-TW';
+                    utterance.rate = 2.0; // 加快語音速度
+                    synth.speak(utterance);
+                }
+            }
+        }
+
+        function togglePause() {
+            if (!isPaused) {
+                clearInterval(timer);
+                isPaused = true;
+                pausedTimeLeft = parseTime(document.getElementById('countdown').textContent) || 0;
+                document.getElementById('pause').textContent = '繼續';
+            } else {
+                isPaused = false;
+                runCountdown(pausedTimeLeft);
+                document.getElementById('pause').textContent = '暫停';
+            }
+        }
+
+        function resetAlarm() {
+            clearInterval(timer);
+            currentSegment = 0;
+            isPaused = false;
+            document.getElementById('status').textContent = '準備中';
+            document.getElementById('countdown').textContent = '';
+            document.getElementById('pause').textContent = '暫停';
+        }
+
+        function playBeep() {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioContext.createOscillator();
+                        const gainNode = audioContext.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        oscillator.start(audioContext.currentTime);
+                        oscillator.stop(audioContext.currentTime + 0.5);
+                    } catch (e) {
+                        console.log('無法播放聲音:', e);
+                    }
+                }, i * 1000); // 每秒響一次，共3聲
+            }
+        }
+
+        function ring() {
+            playBeep();
+            // 推播已移除
+        }
+
+        function testVoiceCountdown() {
+            if (!document.getElementById('voiceCountdown').checked) {
+                alert('請先開啟語音倒數功能！');
+                return;
+            }
+            
+            if (!synth) {
+                alert('您的瀏覽器不支援語音合成功能。');
+                return;
+            }
+            
+            // 測試從5秒倒數到0
+            let testTime = 5;
+            document.getElementById('status').textContent = '🔊 測試語音倒數中...';
+            document.getElementById('countdown').textContent = formatTime(testTime);
+            speakTime(testTime);
+            
+            const testTimer = setInterval(() => {
+                testTime--;
+                document.getElementById('countdown').textContent = formatTime(testTime);
+                speakTime(testTime);
+                
+                if (testTime <= 0) {
+                    clearInterval(testTimer);
+                    document.getElementById('status').textContent = '✅ 測試完成';
+                    document.getElementById('countdown').textContent = '';
+                    setTimeout(() => {
+                        document.getElementById('status').textContent = '準備中';
+                    }, 2000);
+                }
+            }, 1000);
+        }
+    </script>
+    <footer style="text-align: center; padding: 20px; color: #666; font-size: 12px; margin-top: 40px;">
+        <p>© 2026 jacky_kl_cao | <a href="https://github.com/jacky_kl_cao/web-alarm-clock" target="_blank">GitHub</a> | MIT License</p>
+    </footer>
+</body>
+</html>
